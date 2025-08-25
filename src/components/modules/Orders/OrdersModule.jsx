@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useGetMethod, useApiUrl, usePagination, useFilters } from '../../../hooks/useApiMethods';
-import { V2_ENTITY_TYPES } from '../../../APIUtils/APIUtils';
+import { V2_ENTITY_TYPES } from '../../../APIUtils/APIUtilsTypes';
 import { LogicUtils } from '../../../utils/LogicUtils';
 
 // Componente principal del módulo de Orders

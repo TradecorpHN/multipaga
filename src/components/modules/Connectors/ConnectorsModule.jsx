@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useGetMethod, useUpdateMethod, useApiUrl } from '../../../hooks/useApiMethods';
-import { V2_ENTITY_TYPES } from '../../../APIUtils/APIUtils';
+import { V2_ENTITY_TYPES } from '../../../APIUtils/APIUtilsTypes';
 import { LogicUtils } from '../../../utils/LogicUtils';
 
 // Lista de conectores disponibles basada en los logos de Gateway

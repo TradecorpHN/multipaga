@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthProvider';
 import { useUserInfo } from '../context/UserInfoProvider';
 import APIUtils from '../APIUtils/APIUtils';
+import { V2_ENTITY_TYPES, HTTP_METHODS } from '../APIUtils/APIUtilsTypes';
 
 // Hook para manejar el progreso de las peticiones
 export const useApiProgress = () => {
@@ -323,6 +324,191 @@ export const useFilters = (initialFilters = {}) => {
   };
 };
 
+// Hook para métodos específicos de entidades
+export const useApiMethods = () => {
+  const apiFetcher = useApiFetcher();
+  const { buildUrl } = useApiUrl();
+  const { merchantInfo, profileInfo } = useUserInfo();
+
+  // Métodos para conectores
+  const fetchConnectors = useCallback(async () => {
+    const url = buildUrl(V2_ENTITY_TYPES.V2_CONNECTOR, {
+      methodType: HTTP_METHODS.GET,
+      profileId: profileInfo?.profile_id
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'GET' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl, profileInfo]);
+
+  const createConnector = useCallback(async (connectorData) => {
+    const url = buildUrl(V2_ENTITY_TYPES.V2_CONNECTOR, {
+      methodType: HTTP_METHODS.POST,
+      profileId: profileInfo?.profile_id
+    });
+    
+    const response = await apiFetcher({
+      uri: url,
+      method: 'POST',
+      bodyStr: JSON.stringify(connectorData)
+    });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl, profileInfo]);
+
+  const updateConnector = useCallback(async (connectorId, connectorData) => {
+    const url = buildUrl(V2_ENTITY_TYPES.V2_CONNECTOR, {
+      methodType: HTTP_METHODS.PUT,
+      id: connectorId,
+      profileId: profileInfo?.profile_id
+    });
+    
+    const response = await apiFetcher({
+      uri: url,
+      method: 'PUT',
+      bodyStr: JSON.stringify(connectorData)
+    });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl, profileInfo]);
+
+  const deleteConnector = useCallback(async (connectorId) => {
+    const url = buildUrl(V2_ENTITY_TYPES.V2_CONNECTOR, {
+      methodType: HTTP_METHODS.DELETE,
+      id: connectorId,
+      profileId: profileInfo?.profile_id
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'DELETE' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl, profileInfo]);
+
+  // Métodos para pagos
+  const fetchPayments = useCallback(async (queryParams = {}) => {
+    const queryString = new URLSearchParams(queryParams).toString();
+    const url = buildUrl(V2_ENTITY_TYPES.V2_ORDERS_LIST, {
+      methodType: HTTP_METHODS.GET,
+      queryParameters: queryString
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'GET' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  const fetchPaymentDetails = useCallback(async (paymentId) => {
+    const url = buildUrl(V2_ENTITY_TYPES.V2_ORDERS_LIST, {
+      methodType: HTTP_METHODS.GET,
+      id: paymentId
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'GET' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  const createPayment = useCallback(async (paymentData) => {
+    const url = buildUrl(V2_ENTITY_TYPES.V2_ORDERS_LIST, {
+      methodType: HTTP_METHODS.POST
+    });
+    
+    const response = await apiFetcher({
+      uri: url,
+      method: 'POST',
+      bodyStr: JSON.stringify(paymentData)
+    });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  // Métodos para clientes
+  const fetchCustomers = useCallback(async () => {
+    const url = buildUrl(V2_ENTITY_TYPES.CUSTOMERS, {
+      methodType: HTTP_METHODS.GET
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'GET' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  const fetchCustomerDetails = useCallback(async (customerId) => {
+    const url = buildUrl(V2_ENTITY_TYPES.CUSTOMERS, {
+      methodType: HTTP_METHODS.GET,
+      id: customerId
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'GET' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  // Métodos para analytics
+  const fetchAnalytics = useCallback(async (queryParams = {}) => {
+    const queryString = new URLSearchParams(queryParams).toString();
+    const url = buildUrl(V2_ENTITY_TYPES.V2_ORDERS_AGGREGATE, {
+      methodType: HTTP_METHODS.GET,
+      queryParameters: queryString,
+      transactionEntity: 'Profile'
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'GET' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  const fetchPaymentFilters = useCallback(async () => {
+    const url = buildUrl(V2_ENTITY_TYPES.V2_ORDER_FILTERS, {
+      methodType: HTTP_METHODS.GET
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'GET' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  // Métodos para usuarios
+  const fetchUsers = useCallback(async (userType = 'LIST_MERCHANT') => {
+    const url = buildUrl(V2_ENTITY_TYPES.USERS, {
+      methodType: HTTP_METHODS.GET,
+      userType
+    });
+    
+    const response = await apiFetcher({ uri: url, method: 'GET' });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  const createUser = useCallback(async (userData) => {
+    const url = buildUrl(V2_ENTITY_TYPES.USERS, {
+      methodType: HTTP_METHODS.POST,
+      userType: 'CREATE_MERCHANT'
+    });
+    
+    const response = await apiFetcher({
+      uri: url,
+      method: 'POST',
+      bodyStr: JSON.stringify(userData)
+    });
+    return await APIUtils.handleResponse(response);
+  }, [apiFetcher, buildUrl]);
+
+  return {
+    // Conectores
+    fetchConnectors,
+    createConnector,
+    updateConnector,
+    deleteConnector,
+    
+    // Pagos
+    fetchPayments,
+    fetchPaymentDetails,
+    createPayment,
+    
+    // Clientes
+    fetchCustomers,
+    fetchCustomerDetails,
+    
+    // Analytics
+    fetchAnalytics,
+    fetchPaymentFilters,
+    
+    // Usuarios
+    fetchUsers,
+    createUser
+  };
+};
+
 export default {
   useApiProgress,
   useApiFetcher,
@@ -331,6 +517,7 @@ export default {
   useHandleLogout,
   useApiUrl,
   usePagination,
-  useFilters
+  useFilters,
+  useApiMethods
 };
 

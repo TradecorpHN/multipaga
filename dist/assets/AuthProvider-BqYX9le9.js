@@ -1,1 +1,0 @@
-import{r as e}from"./index-DeblWV9C.js";import"./js.cookie-Cz0CWeBA.js";const r=e.createContext(),s=()=>{const t=e.useContext(r);if(!t)throw new Error("useAuth debe ser usado dentro de un AuthProvider");return t};export{s as u};

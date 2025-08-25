@@ -1,32 +1,21 @@
 // APIUtils.js - Adaptación del APIUtils.res del Control Center para JavaScript
 import { LogicUtils } from '../utils/LogicUtils.js';
+import { 
+  V2_ENTITY_TYPES, 
+  USER_TYPES, 
+  TRANSACTION_ENTITY, 
+  HTTP_METHODS,
+  ENTITY_TYPES 
+} from './APIUtilsTypes.js';
 
-// Tipos de entidades V2
-export const V2_ENTITY_TYPES = {
-  CUSTOMERS: 'CUSTOMERS',
-  V2_CONNECTOR: 'V2_CONNECTOR',
-  V2_ORDERS_LIST: 'V2_ORDERS_LIST',
-  V2_ATTEMPTS_LIST: 'V2_ATTEMPTS_LIST',
-  PROCESS_TRACKER: 'PROCESS_TRACKER',
-  V2_ORDER_FILTERS: 'V2_ORDER_FILTERS',
-  V2_ORDERS_AGGREGATE: 'V2_ORDERS_AGGREGATE',
-  PAYMENT_METHOD_LIST: 'PAYMENT_METHOD_LIST',
-  TOTAL_TOKEN_COUNT: 'TOTAL_TOKEN_COUNT',
-  RETRIEVE_PAYMENT_METHOD: 'RETRIEVE_PAYMENT_METHOD'
-};
-
-// Tipos de usuario
-export const USER_TYPES = {
-  NONE: 'NONE',
-  MERCHANT: 'MERCHANT',
-  PROFILE: 'PROFILE'
-};
-
-// Tipos de transacción
-export const TRANSACTION_ENTITY = {
-  MERCHANT: 'Merchant',
-  PROFILE: 'Profile'
-};
+// Clase de excepción personalizada para errores JSON
+export class JsonException extends Error {
+  constructor(jsonData) {
+    super('JSON Exception');
+    this.name = 'JsonException';
+    this.jsonData = jsonData;
+  }
+}
 
 // URLs base para diferentes entornos
 export const BASE_URLS = {
@@ -47,6 +36,150 @@ export const getV2Url = ({
 }) => {
   const connectorBaseURL = "v2/connector-accounts";
   const paymentsBaseURL = "v2/payments";
+
+  switch (entityName) {
+    case V2_ENTITY_TYPES.CUSTOMERS:
+      switch (methodType) {
+        case HTTP_METHODS.GET:
+          if (id) {
+            return `v2/customers/${id}`;
+          }
+          return "v2/customers/list";
+        default:
+          return "";
+      }
+
+    case V2_ENTITY_TYPES.V2_CONNECTOR:
+      switch (methodType) {
+        case HTTP_METHODS.GET:
+          if (id) {
+            return `${connectorBaseURL}/${id}`;
+          }
+          return `v2/profiles/${profileId}/connector-accounts`;
+        case HTTP_METHODS.PUT:
+        case HTTP_METHODS.POST:
+          if (id) {
+            return `${connectorBaseURL}/${id}`;
+          }
+          return connectorBaseURL;
+        default:
+          return "";
+      }
+
+    case V2_ENTITY_TYPES.V2_ORDERS_LIST:
+      switch (methodType) {
+        case HTTP_METHODS.GET:
+          if (id) {
+            if (queryParameters) {
+              return `${paymentsBaseURL}/${id}?${queryParameters}`;
+            }
+            return `${paymentsBaseURL}/${id}/get-intent`;
+          }
+          if (queryParameters) {
+            return `${paymentsBaseURL}/list?${queryParameters}`;
+          }
+          return `${paymentsBaseURL}/list?limit=100`;
+        default:
+          return "";
+      }
+
+    case V2_ENTITY_TYPES.V2_ATTEMPTS_LIST:
+      switch (methodType) {
+        case HTTP_METHODS.GET:
+          if (id) {
+            return `${paymentsBaseURL}/${id}/list_attempts`;
+          }
+          return "";
+        default:
+          return "";
+      }
+
+    case 'PROCESS_TRACKER':
+      switch (methodType) {
+        case HTTP_METHODS.GET:
+          if (id) {
+            return `v2/process_tracker/revenue_recovery_workflow/${id}`;
+          }
+          return "v2/process_tracker/revenue_recovery_workflow";
+        default:
+          return "";
+      }
+
+    case V2_ENTITY_TYPES.V2_ORDER_FILTERS:
+      return "v2/payments/profile/filter";
+
+    case V2_ENTITY_TYPES.V2_ORDERS_AGGREGATE:
+      switch (methodType) {
+        case HTTP_METHODS.GET:
+          if (queryParameters) {
+            switch (transactionEntity) {
+              case TRANSACTION_ENTITY.MERCHANT:
+                return `v2/payments/aggregate?${queryParameters}`;
+              case TRANSACTION_ENTITY.PROFILE:
+                return `v2/payments/profile/aggregate?${queryParameters}`;
+              default:
+                return `v2/payments/aggregate?${queryParameters}`;
+            }
+          }
+          return "";
+        default:
+          return "";
+      }
+
+    case V2_ENTITY_TYPES.PAYMENT_METHOD_LIST:
+      if (id) {
+        return `v2/customers/${id}/saved-payment-methods`;
+      }
+      return "";
+
+    case V2_ENTITY_TYPES.TOTAL_TOKEN_COUNT:
+      return "v2/customers/total-payment-methods";
+
+    case V2_ENTITY_TYPES.RETRIEVE_PAYMENT_METHOD:
+      if (id) {
+        return `v2/payment-methods/${id}`;
+      }
+      return "";
+
+    case 'MERCHANT_ACCOUNT':
+      return `v2/merchant-accounts/${merchantId}`;
+
+    case V2_ENTITY_TYPES.USERS:
+      const userUrl = "user";
+      switch (userType) {
+        case 'CREATE_MERCHANT':
+          if (queryParameters) {
+            return `v2/${userUrl}/create_merchant?${queryParameters}`;
+          }
+          return `v2/${userUrl}/create_merchant`;
+        case 'LIST_MERCHANT':
+          return `v2/${userUrl}/list/merchant`;
+        case 'SWITCH_MERCHANT_NEW':
+          return `v2/${userUrl}/switch/merchant`;
+        case 'LIST_PROFILE':
+          return `v2/${userUrl}/list/profile`;
+        default:
+          return "";
+      }
+
+    case 'API_KEYS':
+      switch (methodType) {
+        case HTTP_METHODS.GET:
+          return "v2/api-keys/list";
+        case HTTP_METHODS.POST:
+        case HTTP_METHODS.PUT:
+        case HTTP_METHODS.DELETE:
+          if (id) {
+            return `v2/api-keys/${id}`;
+          }
+          return "v2/api-keys";
+        default:
+          return "";
+      }
+
+    default:
+      return "";
+  }
 
   switch (entityName) {
     case V2_ENTITY_TYPES.CUSTOMERS:

@@ -237,13 +237,11 @@ class AuthService {
   // Login con email y contraseña (idéntico al control center)
   async signIn(email, password) {
     try {
-      const apiKey = import.meta.env.VITE_HYPERSWITCH_API_KEY;
       const response = await fetch(`${this.baseURL}${API_ENDPOINTS.SIGNIN}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(apiKey ? { 'x-api-key': apiKey } : {})
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           email,
@@ -367,13 +365,11 @@ class AuthService {
         throw new Error('No hay token de autenticación');
       }
 
-      const apiKey = import.meta.env.VITE_HYPERSWITCH_API_KEY;
       const response = await fetch(`${this.baseURL}${API_ENDPOINTS.USER_INFO}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          ...(apiKey ? { 'x-api-key': apiKey } : {})
+          'Accept': 'application/json'
         }
       });
 
@@ -520,4 +516,3 @@ export const getApiHeaders = () => ({
 });
 
 export default authService;
-
