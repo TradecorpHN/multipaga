@@ -1,0 +1,430 @@
+import axios from 'axios';
+import Cookies from 'js-cookie';
+
+// Configuración de URLs base
+const API_URLS = {
+  SANDBOX: import.meta.env.VITE_HYPERSWITCH_API_URL_SANDBOX || 'https://sandbox.hyperswitch.io',
+  PRODUCTION: import.meta.env.VITE_HYPERSWITCH_API_URL_PRODUCTION || 'https://api.hyperswitch.io'
+};
+
+// Determinar URL base según el entorno
+const getBaseURL = () => {
+  const environment = import.meta.env.VITE_ENVIRONMENT || 'sandbox';
+  return environment === 'production' ? API_URLS.PRODUCTION : API_URLS.SANDBOX;
+};
+
+const BASE_URL = getBaseURL();
+
+// Crear instancia de axios
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para agregar token de autorización
+api.interceptors.request.use(
+  (config) => {
+    const token = Cookies.get('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para manejar respuestas
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expirado o inválido
+      Cookies.remove('auth_token');
+      Cookies.remove('user_info');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Endpoints de autenticación basados en el análisis del control center
+export const authAPI = {
+  // Login con email y contraseña
+  signIn: (email, password) => 
+    api.post('/user/v2/signin', { email, password }),
+  
+  // Login con magic link
+  sendMagicLink: (email) => 
+    api.post('/user/signin', { email }),
+  
+  // Verificar email desde magic link
+  verifyEmail: (token) => 
+    api.post('/user/from_email', token),
+  
+  // Configurar 2FA
+  begin2FA: () => 
+    api.post('/user/2fa/totp/begin'),
+  
+  // Verificar TOTP
+  verifyTOTP: (totp) => 
+    api.post('/user/2fa/totp/verify', { totp }),
+  
+  // Verificar código de recuperación
+  verifyRecoveryCode: (recovery_code) => 
+    api.post('/user/2fa/recovery_code/verify', { recovery_code }),
+  
+  // Generar códigos de recuperación (NUEVO - faltante en Multipaga)
+  generateRecoveryCodes: () => 
+    api.post('/user/2fa/recovery_code/generate'),
+  
+  // Terminar 2FA (NUEVO - faltante en Multipaga)
+  terminate2FA: (params = {}) => 
+    api.post('/user/2fa/terminate', params),
+  
+  // Resetear TOTP (NUEVO - faltante en Multipaga)
+  resetTOTP: () => 
+    api.post('/user/2fa/totp/reset'),
+  
+  // Login con SSO (NUEVO - faltante en Multipaga)
+  signInWithSSO: (ssoData) => 
+    api.post('/user/oidc', ssoData),
+  
+  // Obtener lista de métodos de autenticación (NUEVO - faltante en Multipaga)
+  getAuthList: (params = {}) => 
+    api.get('/user/auth/list', { params }),
+  
+  // Seleccionar método de autenticación (NUEVO - faltante en Multipaga)
+  selectAuth: (authData) => 
+    api.post('/user/auth/select', authData),
+  
+  // Obtener información del usuario
+  getUserInfo: () => 
+    api.get('/user'),
+  
+  // Cerrar sesión
+  signOut: () => 
+    api.post('/user/signout'),
+  
+  // Obtener datos del usuario
+  getUserData: () => 
+    api.get('/user/data'),
+  
+  // Verificar estado de 2FA
+  check2FAStatus: () => 
+    api.get('/user/2fa/v2'),
+};
+
+// Endpoints de pagos basados en el análisis del control center
+export const paymentsAPI = {
+  // Listar pagos
+  getPayments: (params = {}) => 
+    api.post('/payments/list', params),
+  
+  // Obtener detalles de un pago
+  getPayment: (paymentId) => 
+    api.get(`/payments/${paymentId}`),
+  
+  // Obtener filtros de pagos
+  getPaymentFilters: () => 
+    api.get('/payments/v2/filter'),
+  
+  // Obtener agregados de pagos
+  getPaymentAggregates: (params = {}) => 
+    api.get('/payments/aggregate', { params }),
+};
+
+// Endpoints de analítica basados en el análisis del control center
+export const analyticsAPI = {
+  // Obtener métricas de pagos
+  getPaymentMetrics: (domain, params) => 
+    api.post(`/analytics/v1/merchant/metrics/${domain}`, params),
+  
+  // Obtener información de analítica
+  getAnalyticsInfo: (domain) => 
+    api.get(`/analytics/v1/merchant/${domain}/info`),
+  
+  // Obtener filtros de analítica
+  getAnalyticsFilters: (domain, params) => 
+    api.post(`/analytics/v1/merchant/filters/${domain}`, params),
+  
+  // Obtener métricas de autenticación
+  getAuthMetrics: (params) => 
+    api.post('/analytics/v1/merchant/metrics/auth_events', params),
+  
+  // Obtener información de eventos de autenticación
+  getAuthInfo: () => 
+    api.get('/analytics/v1/merchant/auth_events/info'),
+  
+  // NUEVOS ENDPOINTS - faltantes en Multipaga original
+  
+  // API Event Logs
+  getAPIEventLogs: (params = {}) => 
+    api.get('/analytics/v1/profile/api_event_logs', { params }),
+  
+  // Gráficos Sankey para pagos
+  getPaymentSankey: (params) => 
+    api.post('/analytics/v1/merchant/metrics/sankey', params),
+  
+  // Gráficos Sankey para exenciones SCA
+  getSCAExemptionSankey: (params) => 
+    api.post('/analytics/v1/merchant/metrics/auth_events/sankey', params),
+  
+  // Reportes detallados
+  getPaymentReport: (params = {}) => 
+    api.get('/analytics/v1/merchant/report/payments', { params }),
+  
+  getRefundReport: (params = {}) => 
+    api.get('/analytics/v1/merchant/report/refunds', { params }),
+  
+  getDisputeReport: (params = {}) => 
+    api.get('/analytics/v1/merchant/report/dispute', { params }),
+  
+  getAuthenticationReport: (params = {}) => 
+    api.get('/analytics/v1/merchant/report/authentications', { params }),
+  
+  // SDK Event Logs
+  getSDKEventLogs: (params = {}) => 
+    api.get('/analytics/v1/profile/sdk_event_logs', { params }),
+  
+  // Webhook Events
+  getWebhookEvents: (params = {}) => 
+    api.get('/events/profile/list', { params }),
+  
+  // Webhook Event Logs
+  getWebhookEventLogs: (params = {}) => 
+    api.get('/analytics/v1/profile/outgoing_webhook_event_logs', { params }),
+  
+  // Connector Event Logs
+  getConnectorEventLogs: (params = {}) => 
+    api.get('/analytics/v1/profile/connector_event_logs', { params }),
+  
+  // Routing Event Logs
+  getRoutingEventLogs: (params = {}) => 
+    api.get('/analytics/v1/profile/routing_event_logs', { params }),
+};
+
+// Endpoints de conectores basados en el análisis del control center
+export const connectorsAPI = {
+  // Listar conectores
+  getConnectors: () => 
+    api.get('/account/connectors'),
+  
+  // Obtener detalles de un conector
+  getConnector: (connectorId) => 
+    api.get(`/account/connectors/${connectorId}`),
+  
+  // Crear conector
+  createConnector: (connectorData) => 
+    api.post('/account/connectors', connectorData),
+  
+  // Actualizar conector
+  updateConnector: (connectorId, connectorData) => 
+    api.put(`/account/connectors/${connectorId}`, connectorData),
+  
+  // Verificar conector (NUEVO - faltante en Multipaga original)
+  verifyConnector: (connectorData) => 
+    api.post('/account/connectors/verify', connectorData),
+};
+
+// Endpoints de reembolsos basados en el análisis del control center
+export const refundsAPI = {
+  // Listar reembolsos
+  getRefunds: (params = {}) => 
+    api.post('/refunds/list', params),
+  
+  // Obtener detalles de un reembolso
+  getRefund: (refundId) => 
+    api.get(`/refunds/${refundId}`),
+  
+  // Crear reembolso
+  createRefund: (refundData) => 
+    api.post('/refunds', refundData),
+  
+  // Obtener filtros de reembolsos
+  getRefundFilters: () => 
+    api.get('/refunds/v2/filter'),
+  
+  // Obtener agregados de reembolsos
+  getRefundAggregates: (params = {}) => 
+    api.get('/refunds/aggregate', { params }),
+};
+
+// Endpoints de disputas basados en el análisis del control center
+export const disputesAPI = {
+  // Listar disputas
+  getDisputes: (params = {}) => 
+    api.get('/disputes/list', { params }),
+  
+  // Obtener detalles de una disputa
+  getDispute: (disputeId) => 
+    api.get(`/disputes/${disputeId}`),
+  
+  // Aceptar disputa
+  acceptDispute: (disputeId) => 
+    api.post(`/disputes/accept/${disputeId}`),
+  
+  // Adjuntar evidencia
+  attachEvidence: (disputeId, evidenceData) => 
+    api.post(`/disputes/evidence/${disputeId}`, evidenceData),
+  
+  // Obtener filtros de disputas
+  getDisputeFilters: () => 
+    api.get('/disputes/filter'),
+  
+  // Obtener agregados de disputas
+  getDisputeAggregates: (params = {}) => 
+    api.get('/disputes/aggregate', { params }),
+};
+
+// Endpoints de cuentas de comerciante basados en el análisis del control center
+export const merchantAPI = {
+  // Obtener detalles de la cuenta
+  getMerchantAccount: () => 
+    api.get('/accounts'),
+  
+  // Actualizar cuenta de comerciante
+  updateMerchantAccount: (accountData) => 
+    api.post('/accounts', accountData),
+  
+  // Obtener perfiles de negocio
+  getBusinessProfiles: () => 
+    api.get('/account/profile'),
+  
+  // Crear perfil de negocio
+  createBusinessProfile: (profileData) => 
+    api.post('/account/business_profile', profileData),
+};
+
+// Endpoints de claves API basados en el análisis del control center
+export const apiKeysAPI = {
+  // Listar claves API
+  getAPIKeys: () => 
+    api.get('/api_keys/list'),
+  
+  // Crear clave API
+  createAPIKey: (keyData) => 
+    api.post('/api_keys', keyData),
+  
+  // Actualizar clave API
+  updateAPIKey: (keyId, keyData) => 
+    api.put(`/api_keys/${keyId}`, keyData),
+  
+  // Eliminar clave API
+  deleteAPIKey: (keyId) => 
+    api.delete(`/api_keys/${keyId}`),
+};
+
+export default api;
+
+
+
+// NUEVOS ENDPOINTS - Gestión de Usuarios y Roles (faltantes en Multipaga original)
+export const userManagementAPI = {
+  // Listar usuarios
+  getUsers: (params = {}) => 
+    api.get('/user/user/list', { params }),
+  
+  // Listar roles
+  getRoles: (params = {}) => 
+    api.get('/user/role/list', { params }),
+  
+  // Obtener rol por ID
+  getRole: (roleId) => 
+    api.get(`/user/role/${roleId}/v2`),
+  
+  // Crear rol personalizado
+  createCustomRole: (roleData) => 
+    api.post('/user/role', roleData),
+  
+  // Invitar múltiples usuarios
+  inviteMultipleUsers: (inviteData, params = {}) => 
+    api.post('/user/user/invite_multiple', inviteData, { params }),
+  
+  // Aceptar invitación (usuario logueado)
+  acceptInvitation: (inviteData) => 
+    api.post('/user/user/invite/accept', inviteData),
+  
+  // Aceptar invitación (pre-login)
+  acceptInvitationPreLogin: (inviteData) => 
+    api.post('/user/user/invite/accept/pre_auth', inviteData),
+  
+  // Actualizar usuario
+  updateUser: (userData) => 
+    api.post('/user/update', userData),
+  
+  // Actualizar rol de usuario
+  updateUserRole: (userType, userData) => 
+    api.post(`/user/user/${userType}`, userData),
+  
+  // Eliminar usuario
+  deleteUser: (userData) => 
+    api.post('/user/user/delete', userData),
+  
+  // Listar roles para invitación
+  getRolesForInvite: (params = {}) => 
+    api.get('/user/role/list/invite', { params }),
+  
+  // Listar invitaciones
+  getInvitations: () => 
+    api.get('/user/list/invitation'),
+  
+  // Obtener detalles de usuario
+  getUserDetails: () => 
+    api.get('/user/user'),
+  
+  // Listar roles para actualizar rol
+  getRolesForUpdate: (params = {}) => 
+    api.get('/user/role/list/update', { params }),
+  
+  // Reenviar invitación
+  resendInvite: (inviteData) => 
+    api.post('/user/user/resend_invite', inviteData),
+  
+  // Crear organización
+  createOrganization: (orgData) => 
+    api.post('/user/create_org', orgData),
+  
+  // Crear comerciante
+  createMerchant: (merchantData, params = {}) => 
+    api.post('/user/create_merchant', merchantData, { params }),
+  
+  // Cambiar organización
+  switchOrganization: (orgData) => 
+    api.post('/user/switch/org', orgData),
+  
+  // Cambiar comerciante
+  switchMerchant: (merchantData) => 
+    api.post('/user/switch/merchant', merchantData),
+  
+  // Cambiar perfil
+  switchProfile: (profileData) => 
+    api.post('/user/switch/profile', profileData),
+  
+  // Listar organizaciones
+  getOrganizations: () => 
+    api.get('/user/list/org'),
+  
+  // Listar comerciantes
+  getMerchants: () => 
+    api.get('/user/list/merchant'),
+  
+  // Listar perfiles
+  getProfiles: () => 
+    api.get('/user/list/profile'),
+  
+  // Obtener información de permisos de grupo
+  getGroupPermissionInfo: (params = {}) => 
+    api.get('/user/permission_info', { params }),
+  
+  // Obtener ACL de grupo
+  getGroupACL: () => 
+    api.get('/user/role/v2'),
+  
+  // Obtener
+
