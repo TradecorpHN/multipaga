@@ -234,7 +234,7 @@ class AuthService {
     return !!this.getTwoFAToken();
   }
 
-  // Login con email y contraseña (idéntico al control center)
+  // Método de login (idéntico al control center)
   async signIn(email, password) {
     try {
       const response = await fetch(`${this.baseURL}${API_ENDPOINTS.SIGNIN}`, {
@@ -369,15 +369,17 @@ class AuthService {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         }
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
         throw new Error(data.message || 'Error obteniendo información del usuario');
       }
+
+      const data = await response.json();
 
       // Guardar información del usuario y merchant
       this.setUserInfo(data);

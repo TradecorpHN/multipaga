@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthProvider.jsx';
-import { authService, API_ENDPOINTS } from '../lib/auth.js';
+import { analyticsAPI } from '../lib/api.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card.jsx';
 import { Button } from './ui/button.jsx';
 import { Badge } from './ui/badge.jsx';
@@ -69,69 +69,25 @@ const AnalyticsModule = () => {
       setLoading(true);
       setError(null);
 
-      const baseURL = authService.baseURL;
-      const token = authService.getAuthToken();
-      const merchantId = authService.getMerchantId();
-
-      if (!token || !merchantId) {
-        throw new Error('No hay token de autenticación o merchant ID');
-      }
-
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      };
-
-      // Calcular fechas basadas en el rango seleccionado
-      const endDate = new Date();
-      const startDate = new Date();
-      
-      switch (timeRange) {
-        case '1d':
-          startDate.setDate(endDate.getDate() - 1);
-          break;
-        case '7d':
-          startDate.setDate(endDate.getDate() - 7);
-          break;
-        case '30d':
-          startDate.setDate(endDate.getDate() - 30);
-          break;
-        case '90d':
-          startDate.setDate(endDate.getDate() - 90);
-          break;
-        default:
-          startDate.setDate(endDate.getDate() - 7);
-      }
-
-      const queryParams = new URLSearchParams({
-        startTime: startDate.toISOString(),
-        endTime: endDate.toISOString(),
-        granularity: timeRange === '1d' ? 'hour' : 'day'
-      });
-
-      // Fetch datos de pagos
-      const paymentsResponse = await fetch(
-        `${baseURL}${API_ENDPOINTS.ANALYTICS_PAYMENTS}?${queryParams}`,
-        { headers }
-      );
-
-      // Fetch datos de reembolsos
-      const refundsResponse = await fetch(
-        `${baseURL}${API_ENDPOINTS.ANALYTICS_REFUNDS}?${queryParams}`,
-        { headers }
-      );
-
-      // Fetch datos del SDK
-      const sdkResponse = await fetch(
-        `${baseURL}${API_ENDPOINTS.ANALYTICS_SDK}?${queryParams}`,
-        { headers }
-      );
+      const [paymentsResponse, refundsResponse, sdkResponse] = await Promise.all([
+        analyticsAPI.getPaymentMetrics(
+          'payments',
+          { time_range: { start_time: startDate.toISOString(), end_time: endDate.toISOString() }, granularity: timeRange === '1d' ? 'hour' : 'day' }
+        ),
+        analyticsAPI.getPaymentMetrics(
+          'refunds',
+          { time_range: { start_time: startDate.toISOString(), end_time: endDate.toISOString() }, granularity: timeRange === '1d' ? 'hour' : 'day' }
+        ),
+        analyticsAPI.getPaymentMetrics(
+          'sdk',
+          { time_range: { start_time: startDate.toISOString(), end_time: endDate.toISOString() }, granularity: timeRange === '1d' ? 'hour' : 'day' }
+        )
+      ]);
 
       const [paymentsData, refundsData, sdkData] = await Promise.all([
-        paymentsResponse.ok ? paymentsResponse.json() : null,
-        refundsResponse.ok ? refundsResponse.json() : null,
-        sdkResponse.ok ? sdkResponse.json() : null
+        paymentsResponse.data || null,
+        refundsResponse.data || null,
+        sdkResponse.data || null
       ]);
 
       // Procesar y estructurar los datos

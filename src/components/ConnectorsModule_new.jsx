@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card.jsx';
 import { Button } from './ui/button.jsx';
 import { Input } from './ui/input.jsx';
@@ -12,17 +12,75 @@ import {
   AlertCircle, 
   CheckCircle, 
   XCircle,
-  Settings
+  Settings,
+  ArrowLeft
 } from 'lucide-react';
 import { connectorsAPI } from '../lib/api';
 import { toast } from 'sonner';
+
+const ConnectorSummary = () => {
+    const { connectorId } = useParams();
+    const [connector, setConnector] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchConnectorDetails = async () => {
+            try {
+                setLoading(true);
+                const response = await connectorsAPI.getConnector(connectorId);
+                setConnector(response.data);
+            } catch (err) {
+                setError('Error al cargar los detalles del conector.');
+                toast.error('Error al cargar los detalles del conector.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (connectorId) {
+            fetchConnectorDetails();
+        }
+    }, [connectorId]);
+
+    if (loading) {
+        return <div>Cargando...</div>;
+    }
+
+    if (error) {
+        return <Alert variant="destructive">{error}</Alert>;
+    }
+
+    if (!connector) {
+        return <div>No se encontró el conector.</div>;
+    }
+
+    return (
+        <div className="p-6 space-y-6">
+            <Button variant="outline" onClick={() => window.history.back()}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver a la lista
+            </Button>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Detalles de {connector.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p><strong>Tipo:</strong> {connector.type}</p>
+                    <p><strong>Estado:</strong> {connector.status}</p>
+                    <p><strong>Última actualización:</strong> {new Date(connector.last_updated).toLocaleString()}</p>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
 
 const ConnectorsModule = () => {
   const [connectors, setConnectors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const navigate = useNavigate();
+  const [selectedConnector, setSelectedConnector] = useState(null);
 
   useEffect(() => {
     fetchConnectors();
@@ -45,7 +103,8 @@ const ConnectorsModule = () => {
 
   const filteredConnectors = useMemo(() => 
     connectors.filter(connector =>
-        (connector.connector_name && connector.connector_name.toLowerCase().includes(searchTerm.toLowerCase()))
+        connector.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        connector.type.toLowerCase().includes(searchTerm.toLowerCase())
     ), [connectors, searchTerm]);
 
   const getStatusIcon = (status) => {
@@ -68,6 +127,10 @@ const ConnectorsModule = () => {
       minute: '2-digit'
     });
   };
+
+  if (selectedConnector) {
+      return <ConnectorSummary connectorId={selectedConnector} />
+  }
 
   return (
     <div className="p-6 space-y-6 bg-background min-h-screen">
@@ -92,7 +155,7 @@ const ConnectorsModule = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
-          <Button variant="default" size="sm" className="button-primary" onClick={() => navigate('/connectors/new')}>
+          <Button variant="default" size="sm" className="button-primary">
             <PlusCircle className="h-4 w-4 mr-2" />
             Nuevo Conector
           </Button>
@@ -131,23 +194,23 @@ const ConnectorsModule = () => {
       ) : filteredConnectors.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredConnectors.map(connector => (
-            <Card key={connector.merchant_connector_id} className="card-enhanced card-hover" onClick={() => navigate(`/connectors/${connector.merchant_connector_id}`)}>
+            <Card key={connector.id} className="card-enhanced card-hover" onClick={() => setSelectedConnector(connector.id)}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium text-white">
-                  {connector.connector_name}
+                  {connector.name}
                 </CardTitle>
                 <Plug className="h-5 w-5 text-blue-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-gray-400">
-                  Tipo: <span className="font-semibold text-white">{connector.connector_type}</span>
+                  Tipo: <span className="font-semibold text-white">{connector.type}</span>
                 </div>
                 <div className="text-sm text-gray-400 flex items-center space-x-1 mt-1">
                   Estado: {getStatusIcon(connector.status)}
                   <span className="capitalize text-white">{connector.status === 'active' ? 'Activo' : 'Inactivo'}</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-2">
-                  Perfil de Negocio: {connector.profile_name}
+                  Última actualización: {formatDate(connector.last_updated)}
                 </div>
                 <div className="mt-4 flex justify-end">
                   <Button variant="ghost" size="sm" className="text-blue-400 hover:bg-blue-900/20">
@@ -175,3 +238,5 @@ const ConnectorsModule = () => {
 };
 
 export default ConnectorsModule;
+
+

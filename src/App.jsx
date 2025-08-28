@@ -17,12 +17,24 @@ const PaymentsModule = React.lazy(() => import('./components/PaymentsModule.jsx'
 const AnalyticsModule = React.lazy(() => import('./components/AnalyticsModule.jsx'));
 const POSModule = React.lazy(() => import('./components/POSModule.jsx'));
 const RemittanceModule = React.lazy(() => import('./components/RemittanceModule.jsx'));
-const UserManagement = React.lazy(() => import('./components/UserManagement.jsx'));
-const OrdersModule = React.lazy(() => import('./components/modules/Orders/OrdersModule.jsx'));
-const ConnectorsModule = React.lazy(() => import('./components/modules/Connectors/ConnectorsModule.jsx'));
-const PaymentForm = React.lazy(() => import('./components/payment/PaymentForm.jsx'));
-
-// Componente de carga
+const UserManagement = React.lazy(() => import(
+  './components/UserManagementModule.jsx'
+));
+const OrdersModule = React.lazy(() => import(
+  './components/OrdersModule.jsx'
+));
+const ConnectorsModule = React.lazy(() => import(
+    './components/ConnectorsModule.jsx'
+));
+const ConnectorSummary = React.lazy(() => import(
+    './components/ConnectorSummary.jsx'
+));
+const SettingsModule = React.lazy(() => import(
+  './components/SettingsModule.jsx'
+));
+const DeveloperToolsModule = React.lazy(() => import(
+  './components/DeveloperToolsModule.jsx'
+));
 const LoadingScreen = () => (
   <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
     <div className="text-center">
@@ -111,30 +123,19 @@ const AuthenticatedApp = () => {
         case 'remittance':
           return <RemittanceModule />;
         case 'refunds':
-          return (
-            <div className="p-6">
-              <h1 className="text-2xl font-bold">Módulo de Reembolsos</h1>
-              <p className="text-gray-600 mt-2">Próximamente...</p>
-            </div>
-          );
+          return <RefundsModule />;
         case 'disputes':
-          return (
-            <div className="p-6">
-              <h1 className="text-2xl font-bold">Módulo de Disputas</h1>
-              <p className="text-gray-600 mt-2">Próximamente...</p>
-            </div>
-          );
+          return <DisputesModule />;
         case 'connectors':
           return <ConnectorsModule />;
         case 'users':
           return <UserManagement />;
+        case 'routing':
+          return <RoutingModule />;
         case 'settings':
-          return (
-            <div className="p-6">
-              <h1 className="text-2xl font-bold">Configuración</h1>
-              <p className="text-gray-600 mt-2">Próximamente...</p>
-            </div>
-          );
+          return <SettingsModule />;
+        case 'developer':
+          return <DeveloperToolsModule />;
         default:
           return <Dashboard />;
       }
@@ -240,18 +241,12 @@ const AppRouter = () => {
         />
 
         <Route 
-          path="/payment" 
+          path="/connectors/:connectorId" 
           element={
             <ProtectedRoute>
               <HyperswitchProvider>
                 <Suspense fallback={<LoadingScreen />}>
-                  <PaymentForm 
-                    amount={100}
-                    currency="USD"
-                    onSuccess={(result) => console.log('Pago exitoso:', result)}
-                    onError={(error) => console.error('Error en pago:', error)}
-                    onCancel={() => console.log('Pago cancelado')}
-                  />
+                  <ConnectorSummary />
                 </Suspense>
               </HyperswitchProvider>
             </ProtectedRoute>
